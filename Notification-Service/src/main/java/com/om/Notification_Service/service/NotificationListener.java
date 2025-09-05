@@ -2,15 +2,18 @@ package com.om.Notification_Service.service;
 
 import com.om.Notification_Service.config.RabbitConfig;
 import com.om.Notification_Service.dto.EventMessage;
+import com.om.Notification_Service.dto.RecipientsAddedToListEvent;
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 
 @Service
+@RabbitListener(queues = RabbitConfig.QUEUE, ackMode = "MANUAL")
 public class NotificationListener {
 
     private final NotificationService notificationService;
@@ -21,7 +24,7 @@ public class NotificationListener {
         this.notificationService = ns;
     }
 
-    @RabbitListener(queues = RabbitConfig.QUEUE, ackMode = "MANUAL")
+    @RabbitHandler
     public void onEvent(EventMessage event,
                         Channel channel,
                         @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
@@ -38,6 +41,24 @@ public class NotificationListener {
             log.error("Failed to process event {}", event, e);
             try {
                 channel.basicNack(tag, false, false); // route to DLQ
+            } catch (Exception nackEx) {
+                log.error("Failed to NACK message", nackEx);
+            }
+        }
+    }
+
+    @RabbitHandler
+    public void onRecipientsAdded(RecipientsAddedToListEvent event,
+                                  Channel channel,
+                                  @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+        try {
+            log.info("Received recipients added event: {}", event);
+            notificationService.handleRecipientsAdded(event);
+            channel.basicAck(tag, false);
+        } catch (Exception e) {
+            log.error("Failed to process recipients added event {}", event, e);
+            try {
+                channel.basicNack(tag, false, false);
             } catch (Exception nackEx) {
                 log.error("Failed to NACK message", nackEx);
             }

@@ -39,7 +39,7 @@ public class NotificationService {
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     @EventListener
-    public void onRecipientsAdded(RecipientsAddedToListEvent evt) {
+    public void handleRecipientsAdded(RecipientsAddedToListEvent evt) {
         log.info("Received RecipientsAddedToListEvent: listId={}, creatorUserId={}, newUserIds={}",
                 evt.getListId(), evt.getCreatorUserId(), evt.getNewUserIds());
         String creatorName = userService.findById(String.valueOf(evt.getCreatorUserId())).getDisplayName();
