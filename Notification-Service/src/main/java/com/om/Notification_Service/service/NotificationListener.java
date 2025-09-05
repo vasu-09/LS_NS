@@ -2,6 +2,7 @@ package com.om.Notification_Service.service;
 
 import com.om.Notification_Service.config.RabbitConfig;
 import com.om.Notification_Service.dto.EventMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.om.Notification_Service.dto.RecipientsAddedToListEvent;
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
@@ -17,19 +18,22 @@ import org.springframework.stereotype.Service;
 public class NotificationListener {
 
     private final NotificationService notificationService;
+    private final ObjectMapper objectMapper;
 
     private static final Logger log = LoggerFactory.getLogger(NotificationListener.class);
 
-    public NotificationListener(NotificationService ns) {
+    public NotificationListener(NotificationService ns, ObjectMapper mapper) {
         this.notificationService = ns;
+        this.objectMapper = mapper;
     }
 
-    @RabbitHandler
-    public void onEvent(EventMessage event,
+    @RabbitHandler(isDefault = true)
+    public void onEvent(String message,
                         Channel channel,
                         @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
         try {
-            log.info("Received event: {}", event);
+            log.info("Received raw message: {}", message);
+            EventMessage event = objectMapper.readValue(message, EventMessage.class);
             if (isValid(event)) {
                 notificationService.handleEvent(event);
                 channel.basicAck(tag, false);
@@ -38,7 +42,7 @@ public class NotificationListener {
                 channel.basicAck(tag, false);
             }
         } catch (Exception e) {
-            log.error("Failed to process event {}", event, e);
+            log.error("Failed to process message {}", message, e);
             try {
                 channel.basicNack(tag, false, false); // route to DLQ
             } catch (Exception nackEx) {
