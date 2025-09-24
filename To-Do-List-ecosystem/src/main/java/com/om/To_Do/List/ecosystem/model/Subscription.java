@@ -6,6 +6,10 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import org.springframework.format.annotation.DateTimeFormat;
+
+
 @Entity
 @Data
 @Builder
@@ -20,8 +24,12 @@ public class Subscription {
     private String customerId;       // Razorpay customer ID
     private String paymentToken;     // Token/mandate ID returned by Razorpay
 
-
+    @JsonFormat(pattern = "yyyy-MM-dd")                // for JSON in/out
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)     // for Spring MVC binding
     private LocalDate startDate;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")                // for JSON in/out
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)     // for Spring MVC binding
     private LocalDate expiryDate;
     private Boolean isActive;
 
@@ -32,17 +40,18 @@ public class Subscription {
     public Subscription() {
     }
 
-    public Subscription(Long userId, String subscriptionId, LocalDate startDate, LocalDate expiryDate, Boolean isActive,
-                        Integer failureCount, LocalDateTime lastFailureAt, String customerId, String paymentToken) {
+    public Subscription(Long userId, String subscriptionId, String customerId, String paymentToken,
+                        LocalDate startDate, LocalDate expiryDate, Boolean isActive,
+                        Integer failureCount, LocalDateTime lastFailureAt) {
         this.userId = userId;
         this.subscriptionId = subscriptionId;
+        this.customerId = customerId;
+        this.paymentToken = paymentToken;
         this.startDate = startDate;
         this.expiryDate = expiryDate;
         this.isActive = isActive;
         this.failureCount = failureCount;
         this.lastFailureAt = lastFailureAt;
-        this.customerId = customerId;
-        this.paymentToken = paymentToken;
     }
 
 

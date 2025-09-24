@@ -109,6 +109,50 @@ public class NotificationService {
             repo.save(notification);
         });
     }
+    @EventListener
+    public void handleListNameChanged(ListNameChangedEvent evt) {
+        log.info("Received ListNameChangedEvent: listId={}, creatorUserId={}, oldName={}, newName={}",
+                evt.getListId(), evt.getCreatorUserId(), evt.getOldName(), evt.getNewName());
+        String creatorName = userService.findById(String.valueOf(evt.getCreatorUserId())).getDisplayName();
+        String template = "%s changed the list name from \"%s\" to \"%s\".";
 
+        for (Long recipientId : evt.getRecipientUserIds()) {
+            ChatRoomDto room = chatRoomService.getOrCreateDirectRoom(evt.getCreatorUserId(), recipientId);
+
+            ChatMessageDto sysMsg = ChatMessageDto.builder()
+                    .roomId(Long.valueOf(room.getId()))
+                    .senderId(evt.getCreatorUserId())
+                    .type(MessageType.SYSTEM)
+                    .content(String.format(template, creatorName, evt.getOldName(), evt.getNewName()))
+                    .timestamp(Instant.now())
+                    .build();
+
+            messageService.save(sysMsg);
+            messageService.broadcast(sysMsg);
+        }
+    }
+
+    @EventListener
+    public void handleListDeleted(ListDeletedEvent evt) {
+        log.info("Received ListDeletedEvent: listId={}, creatorUserId={}, listName={}",
+                evt.getListId(), evt.getCreatorUserId(), evt.getListName());
+        String creatorName = userService.findById(String.valueOf(evt.getCreatorUserId())).getDisplayName();
+        String template = "%s has deleted the list \"%s\".";
+
+        for (Long recipientId : evt.getRecipientUserIds()) {
+            ChatRoomDto room = chatRoomService.getOrCreateDirectRoom(evt.getCreatorUserId(), recipientId);
+
+            ChatMessageDto sysMsg = ChatMessageDto.builder()
+                    .roomId(Long.valueOf(room.getId()))
+                    .senderId(evt.getCreatorUserId())
+                    .type(MessageType.SYSTEM)
+                    .content(String.format(template, creatorName, evt.getListName()))
+                    .timestamp(Instant.now())
+                    .build();
+
+            messageService.save(sysMsg);
+            messageService.broadcast(sysMsg);
+        }
+    }
 }
 
